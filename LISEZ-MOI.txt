@@ -1,0 +1,31 @@
+PASSEPORT DE COMPÉTENCES – 2de BAC PRO – CLASSE 2
+
+Version indépendante du passeport de la première classe. Elle contient les 13 codes de la deuxième classe, les mêmes fiches, exercices, corrections et badges, ainsi qu'un pourcentage de progression sur 22 fiches.
+
+Codes élèves :
+- 2D-K7M4Q
+- 2D-R9T2B
+- 2D-H5W8C
+- 2D-N3D6F
+- 2D-V8J2L
+- 2D-C4X7M
+- 2D-B6Q9T
+- 2D-W2F5K
+- 2D-G7L3R
+- 2D-T5M8D
+- 2D-Y4C6N
+- 2D-P9H2V
+- 2D-D3K7X
+
+PUBLICATION AVEC GITHUB PAGES
+1. Décompressez ce ZIP sur votre ordinateur.
+2. Créez un nouveau dépôt GitHub (par exemple : passeport-2de-classe-2).
+3. Téléversez tous les fichiers de ce dossier à la racine du dépôt, notamment index.html.
+4. Ouvrez Settings > Pages.
+5. Choisissez « Deploy from a branch », puis la branche main et le dossier /(root), et enregistrez.
+6. Attendez l'adresse du site GitHub Pages, puis ouvrez-la pour tester le passeport.
+
+IMPORTANT
+- Ne remplacez pas le dépôt Netlify de la première classe : cette version est destinée à un nouveau site.
+- Les codes sont intégrés au HTML public : ce sont des identifiants, pas des mots de passe secrets.
+- Chaque élève commence avec zéro fiche acquise/validée. La progression est calculée sur 22 fiches.
