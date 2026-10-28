@@ -272,7 +272,7 @@ function ongletResultats_(classeur) {
 }
 
 function niveau_(note) {
-  return note >= 18 ? "N4 — Master" : note >= 14 ? "N3 — Validé" : note >= 10 ? "N2 — Fragile" : "N1 — Non acquis";
+  return note >= 14 ? "N3 — Validé" : note >= 10 ? "N2 — Fragile" : "N1 — Non acquis";
 }
 
 function normaliser_(texte) {
