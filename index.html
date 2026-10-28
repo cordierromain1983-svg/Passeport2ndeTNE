@@ -125,7 +125,7 @@ function manque(it){ // la question n'a pas (encore) de réponse
 /* Envoi automatique au tableau du prof (Google Sheets). Le tableur recorrige lui-même la fiche. */
 const ENVOI_URL="https://script.google.com/macros/s/AKfycbyId8N77KkWxyNEiLrWSbToCs0_IBjtVMAYFpJUJwOEN9aCh-AJzPStdw362jAwrc9ehA/exec";
 const MSG_DECISION={
- "Oui":"🎖️ <b>Badge validé !</b> Il apparaîtra dans ton passeport d'ici 2 minutes.",
+ "Oui":"🎖️ <b>Badge validé !</b> Il apparaîtra dans ton passeport d'ici 2 minutes : recharge la page pour le voir.",
  "À valider":"⏳ <b>Fiche réussie !</b> Ton prof va valider ce badge. En attendant, il apparaît comme « Acquis » dans ton passeport.",
  "Déjà à valider":"⏳ Fiche réussie : ton prof doit encore valider ce badge.",
  "Déjà validée":"🎖️ Ce badge était déjà validé. Bravo, tu t'entraînes encore !",
@@ -181,7 +181,7 @@ function openFiche(k){
   });
   // seules les questions ratées restent modifiables
   items.forEach(it=>valeurs(it).forEach(x=>x.disabled=true));
-  const lv=sc>=18?["N4 — Master",`👑 Badge #${k} Master ! Tu pourras aider les autres sur la fiche ${k}.`]:sc>=14?["N3 — Validé",`✅ Badge #${k} débloqué (+100 XP) !`]:sc>=10?["N2 — Fragile","⚠️ Lis les conseils sous tes erreurs, puis corrige-les."]:["N1 — Non acquis","❌ Relis la leçon, puis corrige tes erreurs grâce aux conseils."];
+  const lv=sc>=18?["N4 — Master",`👑 Fiche réussie au niveau Master ! Tu pourras aider les autres sur la fiche ${k}.`]:sc>=14?["N3 — Validé","🎉 Fiche réussie (+100 XP) !"]:sc>=10?["N2 — Fragile","⚠️ Lis les conseils sous tes erreurs, puis corrige-les."]:["N1 — Non acquis","❌ Relis la leçon, puis corrige tes erreurs grâce aux conseils."];
   const d=new Date(),ds=d.toLocaleDateString("fr-FR")+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),who="Code "+s.code;
   const hs=x=>{let h=5381;for(const c of x)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36).toUpperCase().slice(-4)},code="F"+k+"-"+hs("F"+k+"|"+who+"|"+sc+"|"+tentative+"|"+ds);
   const txt=`RÉSULTAT FICHE ${k} — ${f.name}\nÉlève : ${who}\nNote : ${sc}/20 (${lv[0]})${open}\nTentative n°${tentative}\nDate : ${ds}\nCode : ${code}\nDétail : ${det.join(" ")}`;
