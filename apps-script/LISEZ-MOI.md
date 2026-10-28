@@ -10,3 +10,7 @@ Le jeton GitHub n'est pas ici : il est rangé dans Paramètres du projet → Pro
 
 Après toute modification du script dans Google : Déployer → Gérer les déploiements → Modifier (crayon)
 → Version : « Nouvelle version » → Déployer. L'adresse de l'application Web ne change pas.
+
+Le corrigé (`Corrige.gs`) et la source des fiches ne sont volontairement pas dans ce dépôt public :
+ils contiennent toutes les réponses. Ils sont dans le script du tableur et dans la copie gardée par Romain.
+`encoder_fiches.py` sert à remettre les fiches (fichier source) dans le site.
