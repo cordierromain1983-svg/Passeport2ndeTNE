@@ -35,6 +35,7 @@ li.s .n{font-weight:700;min-width:70px;color:var(--mut)}li.s.done{opacity:.6}li.
 #fx .score{font-size:2rem;font-weight:800}#fx .big{font-size:1.1rem}#fx textarea.res{min-height:150px;font-family:ui-monospace,monospace;font-size:.82rem}#fx details{margin:10px 0}#fx summary{cursor:pointer;font-weight:700;color:var(--ac)}
 #fx .q.vide{background:rgba(255,122,0,.12);border-radius:8px;box-shadow:inset 4px 0 0 #ff7a00;padding-left:8px}
 #fx .fb b{font-weight:700}
+#fx .envoi{margin:12px 0;padding:10px 12px;border-radius:10px;background:var(--bg)}#fx .envoi.ok{background:rgba(40,160,80,.14);color:#1b7a3a}#fx .envoi.ko{background:rgba(240,180,0,.2)}#fx #secours{margin-top:8px}
 </style></head><body><main>
 <div id="home"><h1>🎖️ Mon passeport de compétences</h1><p class="sub">Français · 2de Bac Pro — entre le code personnel donné par ton prof</p>
 <div style="display:flex;gap:8px"><input id="codein" placeholder="Ton code personnel" maxlength="8" autocomplete="off" autocapitalize="characters" style="flex:1;padding:14px;font-size:1.1rem;border-radius:12px;border:2px solid var(--ac);background:var(--card);color:var(--tx);text-transform:uppercase"><button id="codego" style="padding:0 20px;border:0;border-radius:12px;background:#1f3864;color:#fff;font-weight:700;font-size:1rem;cursor:pointer">Entrer</button></div><p id="codemsg" class="msg"></p><div id="out"></div></div><div id="fx" style="display:none"></div></main>
@@ -121,6 +122,29 @@ function manque(it){ // la question n'a pas (encore) de réponse
  if(it.cond)return !v[0]||(v[0]==="Incorrect"&&!v[1]);
  return it.w.some((w,i)=>!v[i]||(w.k==="p"&&nzp(v[i])===nzp(w.init||"")));
 }
+/* Envoi automatique au tableau du prof (Google Sheets). Le tableur recorrige lui-même la fiche. */
+const ENVOI_URL="https://script.google.com/macros/s/AKfycbyId8N77KkWxyNEiLrWSbToCs0_IBjtVMAYFpJUJwOEN9aCh-AJzPStdw362jAwrc9ehA/exec";
+const MSG_DECISION={
+ "Oui":"🎖️ <b>Badge validé !</b> Il apparaîtra dans ton passeport d'ici 2 minutes.",
+ "À valider":"⏳ <b>Fiche réussie !</b> Ton prof va valider ce badge. En attendant, il apparaît comme « Acquis » dans ton passeport.",
+ "Déjà à valider":"⏳ Fiche réussie : ton prof doit encore valider ce badge.",
+ "Déjà validée":"🎖️ Ce badge était déjà validé. Bravo, tu t'entraînes encore !",
+ "Non réussie":"📝 Résultat enregistré. Corrige tes erreurs pour décrocher le badge."};
+async function envoyer(k,s,items,zone,secours){
+ if(!ENVOI_URL){secours.open=true;return}
+ zone.innerHTML="📨 Envoi de ton résultat à ton prof…";
+ const rep={};items.forEach(it=>{rep[it.n]=valeurs(it).map(x=>x.value)});
+ try{
+  const r=await fetch(ENVOI_URL,{method:"POST",body:JSON.stringify({code:s.code,fiche:k,rep})});
+  const d=await r.json();
+  if(!d.ok)throw new Error(d.erreur||"refusé");
+  zone.innerHTML=`✅ Résultat enregistré dans le tableau de ton prof (tentative n°${d.tentative}).<br>${MSG_DECISION[d.decision]||""}`;
+  zone.className="envoi ok";
+ }catch(e){
+  zone.innerHTML="⚠️ L'envoi automatique n'a pas fonctionné"+(e.message&&e.message!=="Failed to fetch"?" ("+e.message+")":"")+". Copie ton résultat ci-dessous et envoie-le à ton prof (ENT, Pronote…).";
+  zone.className="envoi ko";secours.open=true;
+ }
+}
 function openFiche(k){
  const f=FI[k],s=D[sel.value];if(!f||!s)return;
  $("home").style.display="none";const fx=$("fx");fx.style.display="";
@@ -163,8 +187,9 @@ function openFiche(k){
   const txt=`RÉSULTAT FICHE ${k} — ${f.name}\nÉlève : ${who}\nNote : ${sc}/20 (${lv[0]})${open}\nTentative n°${tentative}\nDate : ${ds}\nCode : ${code}\nDétail : ${det.join(" ")}`;
   const rates=items.length-reussi.size;
   $("go").style.display="none";
-  $("fres").innerHTML=`<div class="card" style="text-align:center"><div class="score">${sc} / 20</div><div class="bar"><i style="width:${sc*5}%"></i></div><p class="big"><b>${lv[0]}</b><br>${lv[1]}</p><p class="c">Tentative n°${tentative}. Le badge est confirmé par ton prof : copie ce résultat et envoie-le-lui (ENT, Pronote…).</p><textarea class="res" readonly id="rt">${txt}</textarea><br><button id="cp">📋 Copier mon résultat</button>${rates?`<button id="retry">✏️ Corriger mes ${rates} erreur${rates>1?"s":""}</button>`:""}<button class="alt" onclick="openFiche(${k})">🔄 Recommencer à zéro</button><button class="alt" onclick="closeFiche()">← Retour</button></div>`;
+  $("fres").innerHTML=`<div class="card" style="text-align:center"><div class="score">${sc} / 20</div><div class="bar"><i style="width:${sc*5}%"></i></div><p class="big"><b>${lv[0]}</b><br>${lv[1]}</p><p class="envoi" id="envoi"></p><details id="secours"><summary>📋 Copier mon résultat (si ton prof te le demande)</summary><textarea class="res" readonly id="rt">${txt}</textarea><br><button id="cp">📋 Copier mon résultat</button></details>${rates?`<button id="retry">✏️ Corriger mes ${rates} erreur${rates>1?"s":""}</button>`:""}<button class="alt" onclick="openFiche(${k})">🔄 Recommencer à zéro</button><button class="alt" onclick="closeFiche()">← Retour</button></div>`;
   $("cp").onclick=()=>{const t=$("rt");t.select();try{navigator.clipboard.writeText(t.value)}catch(e){document.execCommand("copy")}$("cp").textContent="✔ Copié !"};
+  envoyer(k,s,items,$("envoi"),$("secours"));
   if(rates)$("retry").onclick=()=>{
    items.forEach(it=>{if(!reussi.has(it.n))valeurs(it).forEach(x=>x.disabled=false)});
    $("fres").innerHTML="";$("go").style.display="";$("go").textContent="✅ Corriger à nouveau";
