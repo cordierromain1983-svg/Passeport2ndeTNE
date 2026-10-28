@@ -13,6 +13,7 @@ const CONFIGURATIONS = {
 };
 const SEUIL_REUSSITE = 14;          // note minimale (sur 20) pour réussir une fiche
 const ONGLET_RESULTATS = "Résultats";
+const ONGLET_CONNEXIONS = "Connexions";
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -183,6 +184,8 @@ function doPost(e) {
   try {
     if (!e || !e.postData || e.postData.contents.length > 20000) throw new Error("Envoi invalide.");
     const envoi = JSON.parse(e.postData.contents);
+    if (envoi.type === "connexion") return json_(noterConnexion_(envoi.code));
+    if (envoi.type === "prof") return json_(vueProf_(envoi.code));
     const code = String(envoi.code || "").trim().toUpperCase();
     const fiche = String(Number(envoi.fiche));
     const nomFeuille = Object.keys(CONFIGURATIONS).find(n => code.startsWith(CONFIGURATIONS[n].prefixe));
@@ -276,13 +279,13 @@ function niveau_(note) {
 }
 
 function normaliser_(texte) {
-  return String(texte).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return String(texte).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
 // --- Correction : mêmes règles que sur le site ---
 function nzs_(s, ai) {
   s = String(s).normalize("NFC").toLowerCase().replace(/’/g, "'");
-  if (ai) s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (ai) s = s.normalize("NFD").replace(/[̀-ͯ]/g, "");
   return s.replace(/[«»"'‑\-.!?;:,\[\]()…]+/g, " ").replace(/\s+/g, " ").trim();
 }
 function nzp_(s) {
@@ -303,4 +306,77 @@ function itemJuste_(item, v, ai) {
     return item.w[0].ok[0] === "Correct" ? true : reponseJuste_(item.w[1], v[1] || "", ai);
   }
   return item.w.every((w, i) => reponseJuste_(w, v[i] || "", ai));
+}
+
+// ---------------------------------------------------------------------
+//  Connexions des élèves et vue d'ensemble pour le prof
+//  Le code prof est rangé dans Paramètres du projet > Propriétés du script
+//  (CODE_PROF) : il n'apparaît ni dans ce code ni sur les sites.
+// ---------------------------------------------------------------------
+function json_(objet) {
+  return ContentService.createTextOutput(JSON.stringify(objet)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function dateFr_(d) {
+  return d instanceof Date ? Utilities.formatDate(d, "Europe/Paris", "dd/MM/yyyy HH:mm") : String(d || "");
+}
+
+// Note une connexion d'élève (au plus une toutes les 10 minutes par code).
+function noterConnexion_(brut) {
+  const code = String(brut || "").trim().toUpperCase();
+  const nomFeuille = Object.keys(CONFIGURATIONS).find(n => code.startsWith(CONFIGURATIONS[n].prefixe));
+  if (!nomFeuille || !/^[A-Z0-9]{1,3}-[A-Z0-9]{5}$/.test(code)) return { ok: false };
+  const cache = CacheService.getScriptCache();
+  if (cache.get("cx:" + code)) return { ok: true };
+  const classeur = SpreadsheetApp.getActiveSpreadsheet();
+  const grille = classeur.getSheetByName(nomFeuille);
+  const codes = grille.getRange(1, 1, 1, grille.getLastColumn()).getDisplayValues()[0]
+    .map(c => String(c).trim().toUpperCase());
+  if (codes.indexOf(code) < 1) return { ok: false };
+  let feuille = classeur.getSheetByName(ONGLET_CONNEXIONS);
+  if (!feuille) {
+    feuille = classeur.insertSheet(ONGLET_CONNEXIONS);
+    feuille.appendRow(["Date", "Classe", "Code"]);
+    feuille.setFrozenRows(1);
+    feuille.getRange("1:1").setFontWeight("bold");
+    feuille.getRange("A:A").setNumberFormat("dd/mm/yyyy hh:mm");
+  }
+  feuille.appendRow([new Date(), nomFeuille, code]);
+  cache.put("cx:" + code, "1", 600);
+  return { ok: true };
+}
+
+// Renvoie, pour les deux classes, badges, connexions et derniers envois.
+function vueProf_(brut) {
+  const attendu = PropertiesService.getScriptProperties().getProperty("CODE_PROF");
+  const code = String(brut || "").trim().toUpperCase();
+  if (!attendu || code !== String(attendu).trim().toUpperCase()) {
+    Utilities.sleep(2000);   // freine les essais au hasard
+    return { ok: false, erreur: "Code inconnu." };
+  }
+  const classeur = SpreadsheetApp.getActiveSpreadsheet();
+  const lire = nom => {
+    const f = classeur.getSheetByName(nom);
+    return f && f.getLastRow() > 1 ? f.getRange(2, 1, f.getLastRow() - 1, f.getLastColumn()).getValues() : [];
+  };
+  const connexions = lire(ONGLET_CONNEXIONS);
+  const resultats = lire(ONGLET_RESULTATS);
+  const classes = Object.keys(CONFIGURATIONS).map(nomFeuille => {
+    const etat = lireGrille_(nomFeuille) || { validations: {}, acquis: {} };
+    const eleves = Object.keys(etat.validations).map(c => {
+      const cx = connexions.filter(l => String(l[2]).toUpperCase() === c);
+      const env = resultats.filter(l => String(l[2]).toUpperCase() === c);
+      const dernier = cx.length ? cx[cx.length - 1][0] : null;
+      return {
+        code: c, val: etat.validations[c], acq: etat.acquis[c],
+        nbCx: cx.length, derniereCx: dernier ? dateFr_(dernier) : "",
+        nbEnvois: env.length
+      };
+    });
+    return { nom: nomFeuille, eleves: eleves };
+  });
+  const derniers = resultats.slice(-40).reverse().map(l => ({
+    date: dateFr_(l[0]), classe: l[1], code: l[2], fiche: l[3], note: l[4], decision: l[7]
+  }));
+  return { ok: true, classes: classes, derniers: derniers, maj: dateFr_(new Date()) };
 }

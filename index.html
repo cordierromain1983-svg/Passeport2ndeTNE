@@ -39,7 +39,7 @@ li.s .n{font-weight:700;min-width:70px;color:var(--mut)}li.s.done{opacity:.6}li.
 #fx .nocoll{margin:6px 0 0 26px;font-size:.88rem;padding:6px 10px;border-radius:8px;background:rgba(240,180,0,.22)}
 </style></head><body><main>
 <div id="home"><h1>🎖️ Mon passeport de compétences</h1><p class="sub">Français · 2de Bac Pro — entre le code personnel donné par ton prof</p>
-<div style="display:flex;gap:8px"><input id="codein" placeholder="Ton code personnel" maxlength="8" autocomplete="off" autocapitalize="characters" style="flex:1;padding:14px;font-size:1.1rem;border-radius:12px;border:2px solid var(--ac);background:var(--card);color:var(--tx);text-transform:uppercase"><button id="codego" style="padding:0 20px;border:0;border-radius:12px;background:#1f3864;color:#fff;font-weight:700;font-size:1rem;cursor:pointer">Entrer</button></div><p id="codemsg" class="msg"></p><div id="out"></div></div><div id="fx" style="display:none"></div></main>
+<div style="display:flex;gap:8px"><input id="codein" placeholder="Ton code personnel" maxlength="12" autocomplete="off" autocapitalize="characters" style="flex:1;padding:14px;font-size:1.1rem;border-radius:12px;border:2px solid var(--ac);background:var(--card);color:var(--tx);text-transform:uppercase"><button id="codego" style="padding:0 20px;border:0;border-radius:12px;background:#1f3864;color:#fff;font-weight:700;font-size:1rem;cursor:pointer">Entrer</button></div><p id="codemsg" class="msg"></p><div id="out"></div></div><div id="fx" style="display:none"></div></main>
 <script>
 /* PROF : pour valider un badge, ajoute son numéro dans "val" de l'élève (une ligne par élève), ex. "val":[16,17]. Enregistre puis redistribue le fichier. */
 const D=[{"code":"2D-K7M4Q","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-R9T2B","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-H5W8C","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-N3D6F","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-V8J2L","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-C4X7M","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-B6Q9T","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-W2F5K","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-G7L3R","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-T5M8D","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-Y4C6N","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-P9H2V","plan":[1,2,3,4,5],"acq":[],"val":[]},{"code":"2D-D3K7X","plan":[1,2,3,4,5],"acq":[],"val":[]}];
@@ -215,7 +215,28 @@ function openFiche(k){
   $("fres").scrollIntoView({behavior:"smooth"});
  };
 }
-$("codego").onclick=()=>{const c=$("codein").value.trim().toUpperCase().replace(/\s/g,""),i=D.findIndex(s=>s.code===c);if(i<0){$("codemsg").textContent="Code inconnu : vérifie-le avec ton prof.";out.innerHTML="";return}$("codemsg").textContent="";sel.value=String(i);sel.onchange()};
+$("codego").onclick=()=>{const c=$("codein").value.trim().toUpperCase().replace(/\s/g,""),i=D.findIndex(s=>s.code===c);if(i<0&&/^PROF-/.test(c)){vueProf(c);return}if(i<0){$("codemsg").textContent="Code inconnu : vérifie-le avec ton prof.";out.innerHTML="";return}$("codemsg").textContent="";sel.value=String(i);sel.onchange();if(ENVOI_URL)fetch(ENVOI_URL,{method:"POST",body:JSON.stringify({type:"connexion",code:c})}).catch(()=>{})};
+/* Vue prof : badges et connexions des deux classes (le code est vérifié par le tableur). */
+async function vueProf(c){
+ $("codemsg").textContent="⏳ Chargement de la vue prof…";out.innerHTML="";
+ let d;
+ try{const r=await fetch(ENVOI_URL,{method:"POST",body:JSON.stringify({type:"prof",code:c})});d=await r.json()}catch(e){d={ok:false,erreur:"Connexion au tableau impossible."}}
+ if(!d.ok){$("codemsg").textContent=d.erreur==="Code inconnu."?"Code inconnu : vérifie-le avec ton prof.":"⚠️ "+d.erreur;return}
+ $("codemsg").textContent="";
+ const nb=Object.keys(F).length;
+ const cl=d.classes.map(k=>{
+  const tot=k.eleves.reduce((a,e)=>a+e.val.length,0),av=k.eleves.reduce((a,e)=>a+e.acq.length,0),cx=k.eleves.filter(e=>e.nbCx).length;
+  const lignes=k.eleves.map(e=>{const V=new Set(e.val),A=new Set(e.acq);
+   const cases=Object.keys(F).map(n=>`<i class="pc ${V.has(+n)?"ok":A.has(+n)?"av":""}" title="Fiche ${n} · ${F[n][0]}${V.has(+n)?" : validé":A.has(+n)?" : à valider":""}">${n}</i>`).join("");
+   return `<tr><td><b>${e.code}</b></td><td>${e.nbCx?`${e.nbCx}<small>${e.derniereCx}</small>`:`<span class="mu">jamais</span>`}</td><td>${e.nbEnvois}</td><td><b>${e.val.length}</b>${e.acq.length?` <span class="av">+${e.acq.length}</span>`:""}</td><td class="cs">${cases}</td></tr>`}).join("");
+  return `<h2>${k.nom} — ${k.eleves.length} élèves</h2><div class="pk"><div class="card"><b>${cx}</b>/${k.eleves.length}<small>déjà connectés</small></div><div class="card"><b>${tot}</b><small>badges validés</small></div><div class="card"><b>${av}</b><small>à valider</small></div></div><div class="tw"><table class="pt"><thead><tr><th>Code</th><th>Connexions</th><th>Envois</th><th>Badges</th><th>Fiches 1 à ${nb}</th></tr></thead><tbody>${lignes}</tbody></table></div>`}).join("");
+ const env=d.derniers.length?d.derniers.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${r.fiche}</td><td>${r.note}/20</td><td>${r.decision}</td></tr>`).join(""):`<tr><td colspan="5" class="mu">Aucun envoi pour l'instant.</td></tr>`;
+ out.innerHTML=`<style>.pk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.pk .card{text-align:center;padding:10px}.pk b{font-size:1.5rem;color:var(--ac)}.pk small,.pt small{display:block;color:var(--mut);font-size:.72rem}.tw{overflow-x:auto;border:1px solid var(--bd);border-radius:12px;background:var(--card)}.pt{border-collapse:collapse;width:100%;font-size:.85rem}.pt th,.pt td{padding:7px 8px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:middle;white-space:nowrap}.pt th{color:var(--mut);font-weight:600;font-size:.75rem}.cs{white-space:normal!important;min-width:260px}.pc{display:inline-block;width:20px;height:20px;line-height:20px;margin:1px;border-radius:5px;text-align:center;font-style:normal;font-size:.65rem;background:var(--bd);color:var(--mut)}.pc.ok{background:#2e9d4b;color:#fff}.pc.av{background:#f5b700;color:#222}span.av{color:#b07d00;font-weight:700;font-size:.8rem}.mu{color:var(--mut)}</style>
+ <div class="hello">👩‍🏫 Vue prof <small style="color:var(--mut);font-weight:400">· mise à jour ${d.maj}</small></div>
+ <p class="sub"><i class="pc ok">✓</i> validé &nbsp; <i class="pc av">!</i> à valider &nbsp; <i class="pc"> </i> pas encore · <a href="#" id="pmaj">🔄 Actualiser</a></p>${cl}
+ <h2>Derniers envois de fiches</h2><div class="tw"><table class="pt"><thead><tr><th>Date</th><th>Code</th><th>Fiche</th><th>Note</th><th>Décision</th></tr></thead><tbody>${env}</tbody></table></div>`;
+ $("pmaj").onclick=e=>{e.preventDefault();vueProf(c)};
+}
 $("codein").onkeydown=e=>{if(e.key==="Enter")$("codego").onclick()};
 </script>
 <script>
