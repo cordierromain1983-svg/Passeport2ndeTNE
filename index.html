@@ -36,6 +36,7 @@ li.s .n{font-weight:700;min-width:70px;color:var(--mut)}li.s.done{opacity:.6}li.
 #fx .q.vide{background:rgba(255,122,0,.12);border-radius:8px;box-shadow:inset 4px 0 0 #ff7a00;padding-left:8px}
 #fx .fb b{font-weight:700}
 #fx .envoi{margin:12px 0;padding:10px 12px;border-radius:10px;background:var(--bg)}#fx .envoi.ok{background:rgba(40,160,80,.14);color:#1b7a3a}#fx .envoi.ko{background:rgba(240,180,0,.2)}#fx #secours{margin-top:8px}
+#fx .nocoll{margin:6px 0 0 26px;font-size:.88rem;padding:6px 10px;border-radius:8px;background:rgba(240,180,0,.22)}
 </style></head><body><main>
 <div id="home"><h1>🎖️ Mon passeport de compétences</h1><p class="sub">Français · 2de Bac Pro — entre le code personnel donné par ton prof</p>
 <div style="display:flex;gap:8px"><input id="codein" placeholder="Ton code personnel" maxlength="8" autocomplete="off" autocapitalize="characters" style="flex:1;padding:14px;font-size:1.1rem;border-radius:12px;border:2px solid var(--ac);background:var(--card);color:var(--tx);text-transform:uppercase"><button id="codego" style="padding:0 20px;border:0;border-radius:12px;background:#1f3864;color:#fff;font-weight:700;font-size:1rem;cursor:pointer">Entrer</button></div><p id="codemsg" class="msg"></p><div id="out"></div></div><div id="fx" style="display:none"></div></main>
@@ -145,6 +146,22 @@ async function envoyer(k,s,items,zone,secours){
   zone.className="envoi ko";secours.open=true;
  }
 }
+/* BLOQUE_COLLAGE : dans les fiches, les réponses s'écrivent au clavier (pas de copier-coller ni de glisser-déposer). */
+(()=>{const fx=$("fx");
+ const champ=t=>t&&t.closest&&t.closest("#fx")&&(t.tagName==="TEXTAREA"||(t.tagName==="INPUT"&&t.type==="text"));
+ const avertir=t=>{const q=t.closest(".q");if(!q)return;let m=q.querySelector(".nocoll");
+  if(!m){m=document.createElement("div");m.className="nocoll";q.insertBefore(m,q.querySelector(".fbk"))}
+  m.textContent="✋ Écris ta réponse toi-même : le copier-coller est désactivé dans les fiches.";
+  clearTimeout(m._t);m._t=setTimeout(()=>m.remove(),4000)};
+ const bloque=e=>{if(champ(e.target)){e.preventDefault();avertir(e.target)}};
+ fx.addEventListener("paste",bloque,true);
+ fx.addEventListener("drop",bloque,true);
+ fx.addEventListener("dragover",e=>{if(champ(e.target))e.preventDefault()},true);
+ // collage depuis le menu du téléphone, ou longue suggestion du presse-papiers d'un clavier mobile
+ fx.addEventListener("beforeinput",e=>{if(!champ(e.target))return;
+  const t=e.inputType||"";
+  if(t==="insertFromPaste"||t==="insertFromDrop"||t==="insertFromYank"||((t==="insertText"||t==="insertReplacementText")&&(e.data||"").length>15)){e.preventDefault();avertir(e.target)}},true);
+})();
 function openFiche(k){
  const f=FI[k],s=D[sel.value];if(!f||!s)return;
  $("home").style.display="none";const fx=$("fx");fx.style.display="";
