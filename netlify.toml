@@ -1,0 +1,4 @@
+# Netlify publie uniquement le passeport de la 2NDE MS (dossier 2nde-ms).
+[build]
+  publish = "2nde-ms"
+  command = ""
