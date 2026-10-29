@@ -1,11 +1,18 @@
 {
-  "name": "Passeport de compétences – 2de Bac Pro – Classe 2",
-  "short_name": "Passeport 2de C2",
-  "description": "Passeport de compétences Français, 2de Bac Pro – deuxième classe",
+  "id": "./",
+  "name": "Mon passeport – 2TNE1",
+  "short_name": "Mon passeport",
+  "description": "Mon passeport de compétences en français : fiches en ligne et badges à débloquer.",
+  "lang": "fr-FR",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f6fb",
-  "theme_color": "#1f3864",
+  "orientation": "portrait-primary",
+  "background_color": "#15102e",
+  "theme_color": "#15102e",
+  "categories": [
+    "education"
+  ],
   "icons": [
     {
       "src": "./icon-192.png",
@@ -18,10 +25,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ],
-  "id": "./",
-  "lang": "fr-FR",
-  "scope": "./",
-  "orientation": "portrait-primary"
+  ]
 }
