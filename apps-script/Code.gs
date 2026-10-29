@@ -9,8 +9,25 @@
 
 const CONFIGURATIONS = {
   "2TNE1": { depot: "cordierromain1983-svg/Passeport2ndeTNE", prefixe: "2D-" },
-  "1MS": { depot: "cordierromain1983-svg/passeport-comp-tences-1-re-Bac-pro", prefixe: "1P-" }
+  "1MS": { depot: "cordierromain1983-svg/passeport-comp-tences-1-re-Bac-pro", prefixe: "1P-" },
+  // 2NDE MS : codes sans préfixe (reconnus grâce à la ligne 1 de l'onglet), site dans le dossier 2nde-ms publié par Netlify
+  "2NDE MS": { depot: "cordierromain1983-svg/Passeport2ndeTNE", chemin: "2nde-ms/index.html", prefixe: "" }
 };
+const FORMAT_CODE = /^[A-Z0-9-]{4,12}$/;
+
+// Trouve l'onglet (la classe) d'un code élève : par préfixe, sinon en cherchant le code en ligne 1.
+function classeDuCode_(code) {
+  if (!FORMAT_CODE.test(code)) return null;
+  const parPrefixe = Object.keys(CONFIGURATIONS).find(n => CONFIGURATIONS[n].prefixe && code.startsWith(CONFIGURATIONS[n].prefixe));
+  if (parPrefixe) return parPrefixe;
+  const classeur = SpreadsheetApp.getActiveSpreadsheet();
+  return Object.keys(CONFIGURATIONS).filter(n => !CONFIGURATIONS[n].prefixe).find(n => {
+    const f = classeur.getSheetByName(n);
+    if (!f) return false;
+    return f.getRange(1, 1, 1, f.getLastColumn()).getDisplayValues()[0]
+      .some((c, i) => i > 0 && String(c).trim().toUpperCase() === code);
+  }) || null;
+}
 const SEUIL_REUSSITE = 14;          // note minimale (sur 20) pour réussir une fiche
 const ONGLET_RESULTATS = "Résultats";
 const ONGLET_CONNEXIONS = "Connexions";
@@ -37,7 +54,7 @@ function publierValidations() {
   const nomFeuille = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getName();
 
   if (!CONFIGURATIONS[nomFeuille]) {
-    ui.alert("Sélectionne l'onglet 2TNE1 ou 1MS.");
+    ui.alert("Sélectionne l'onglet d'une classe : " + Object.keys(CONFIGURATIONS).join(", ") + ".");
     return;
   }
 
@@ -98,7 +115,7 @@ function lireGrille_(nomFeuille) {
   // Ligne 1 : codes élèves (à partir de la colonne B). Colonne A : noms des fiches.
   for (let col = 1; col < donnees[0].length; col++) {
     const code = String(donnees[0][col]).trim().toUpperCase();
-    if (!code.startsWith(config.prefixe)) continue;
+    if (config.prefixe ? !code.startsWith(config.prefixe) : !FORMAT_CODE.test(code)) continue;
     const val = [];
     const acq = [];
     for (let ligne = 1; ligne < donnees.length; ligne++) {
@@ -124,7 +141,7 @@ function publierVersGitHub_(nomFeuille, etat) {
       "Propriétés du script et ajoute GITHUB_TOKEN avec ton jeton GitHub."
     );
   }
-  const url = "https://api.github.com/repos/" + config.depot + "/contents/index.html";
+  const url = "https://api.github.com/repos/" + config.depot + "/contents/" + (config.chemin || "index.html");
   const entetes = {
     Authorization: "Bearer " + jeton,
     Accept: "application/vnd.github+json",
@@ -188,8 +205,8 @@ function doPost(e) {
     if (envoi.type === "prof") return json_(vueProf_(envoi.code));
     const code = String(envoi.code || "").trim().toUpperCase();
     const fiche = String(Number(envoi.fiche));
-    const nomFeuille = Object.keys(CONFIGURATIONS).find(n => code.startsWith(CONFIGURATIONS[n].prefixe));
-    if (!nomFeuille || !/^[A-Z0-9]{1,3}-[A-Z0-9]{5}$/.test(code)) throw new Error("Code élève inconnu.");
+    const nomFeuille = classeDuCode_(code);
+    if (!nomFeuille) throw new Error("Code élève inconnu.");
     const corrige = CORRIGE[fiche];
     if (!corrige) throw new Error("Cette fiche ne se fait pas en ligne.");
 
@@ -324,8 +341,8 @@ function dateFr_(d) {
 // Note une connexion d'élève (au plus une toutes les 10 minutes par code).
 function noterConnexion_(brut) {
   const code = String(brut || "").trim().toUpperCase();
-  const nomFeuille = Object.keys(CONFIGURATIONS).find(n => code.startsWith(CONFIGURATIONS[n].prefixe));
-  if (!nomFeuille || !/^[A-Z0-9]{1,3}-[A-Z0-9]{5}$/.test(code)) return { ok: false };
+  const nomFeuille = classeDuCode_(code);
+  if (!nomFeuille) return { ok: false };
   const cache = CacheService.getScriptCache();
   if (cache.get("cx:" + code)) return { ok: true };
   const classeur = SpreadsheetApp.getActiveSpreadsheet();
