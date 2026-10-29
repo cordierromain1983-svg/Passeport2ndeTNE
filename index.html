@@ -401,8 +401,8 @@ async function vueProf(c){
  $("codemsg").textContent="⏳ Chargement de la vue prof…";out.innerHTML="";
  let d;
  try{const r=await fetch(ENVOI_URL,{method:"POST",body:JSON.stringify({type:"prof",code:c})});d=await r.json()}catch(e){d={ok:false,erreur:"Connexion au tableau impossible."}}
- if(!d.ok){$("codemsg").textContent=d.erreur==="Code inconnu."?"Code inconnu : vérifie-le avec ton prof.":"⚠️ "+d.erreur;return}
- $("codemsg").textContent="";$("accueil").style.display="none";window.scrollTo(0,0);
+ if(!d.ok){$("codemsg").textContent=d.erreur==="Code inconnu."?"Code inconnu : vérifie-le avec ton prof.":"⚠️ "+d.erreur;if(d.erreur==="Code inconnu.")try{localStorage.removeItem("moncode")}catch(e){}return}
+ $("codemsg").textContent="";$("accueil").style.display="none";window.scrollTo(0,0);/* PROF_APPLI : identifiant retenu seulement dans l'appli installée */if(APPLI.inst())try{localStorage.setItem("moncode",c)}catch(e){}
  const nb=Object.keys(F).length;
  const cl=d.classes.map(k=>{
   const tot=k.eleves.reduce((a,e)=>a+e.val.length,0),av=k.eleves.reduce((a,e)=>a+e.acq.length,0),cx=k.eleves.filter(e=>e.nbCx).length;
@@ -413,7 +413,7 @@ async function vueProf(c){
  const env=d.derniers.length?d.derniers.map(r=>`<tr><td>${r.date}</td><td>${r.code}</td><td>${r.fiche}</td><td>${r.note}/20</td><td>${r.decision}</td></tr>`).join(""):`<tr><td colspan="5" class="mu">Aucun envoi pour l'instant.</td></tr>`;
  out.innerHTML=`<style>.pk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.pk .card{text-align:center;padding:10px}.pk b{font-size:1.5rem;color:var(--ac)}.pk small,.pt small{display:block;color:var(--mut);font-size:.72rem}.tw{overflow-x:auto;border:1px solid var(--bd);border-radius:12px;background:var(--card)}.pt{border-collapse:collapse;width:100%;font-size:.85rem}.pt th,.pt td{padding:7px 8px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:middle;white-space:nowrap}.pt th{color:var(--mut);font-weight:600;font-size:.75rem}.cs{white-space:normal!important;min-width:260px}.pc{display:inline-block;width:20px;height:20px;line-height:20px;margin:1px;border-radius:5px;text-align:center;font-style:normal;font-size:.65rem;background:var(--bd);color:var(--mut)}.pc.ok{background:#2e9d4b;color:#fff}.pc.av{background:#f5b700;color:#222}span.av{color:#b07d00;font-weight:700;font-size:.8rem}.mu{color:var(--mut)}</style>
  <div class="hello">👩‍🏫 Vue prof <small style="color:var(--mut);font-weight:400">· mise à jour ${d.maj}</small></div>
- <p class="sub"><i class="pc ok">✓</i> validé &nbsp; <i class="pc av">!</i> à valider &nbsp; <i class="pc"> </i> pas encore · <a href="#" id="pmaj">🔄 Actualiser</a> · <a href="#" onclick="changerCode();return false">Changer de code</a></p>${cl}
+ <p class="sub"><i class="pc ok">✓</i> validé &nbsp; <i class="pc av">!</i> à valider &nbsp; <i class="pc"> </i> pas encore · <a href="#" id="pmaj">🔄 Actualiser</a> · <a href="#" onclick="changerCode();return false">Changer de code</a></p><p ${APPLI.inst()?"hidden":""}><button type="button" class="bt2 inst" data-inst onclick="APPLI.installer()">📲 Installer l'appli</button></p>${cl}
  <h2>Derniers envois de fiches</h2><div class="tw"><table class="pt"><thead><tr><th>Date</th><th>Code</th><th>Fiche</th><th>Note</th><th>Décision</th></tr></thead><tbody>${env}</tbody></table></div>`;
  $("pmaj").onclick=e=>{e.preventDefault();vueProf(c)};
 }
@@ -470,7 +470,7 @@ const APPLI=(()=>{let evt=null;
  maj();
  return {inst,installer,maj}})();
 (()=>{if(!APPLI.inst())return;let c="";try{c=localStorage.getItem("moncode")||""}catch(e){}
- if(c&&D.some(s=>s.code===c)){$("codein").value=c;$("codego").onclick()}})();
+ if(c&&(D.some(s=>s.code===c)||/^PROF-/.test(c))){$("codein").value=c;$("codego").onclick()}})();
 $("codein").onkeydown=e=>{if(e.key==="Enter")$("codego").onclick()};
 (()=>{const m=document.querySelector("#accueil .mur");m.innerHTML=Object.keys(F).map(k=>`<img src="${IMG[k]||""}" alt="" style="--g:${C[F[k][1]]}">`).join("");
  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;const im=[...m.children];
