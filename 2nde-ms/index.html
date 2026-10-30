@@ -454,13 +454,19 @@ const APPLI=(()=>{let evt=null;
  const inst=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
  const android=/android/i.test(navigator.userAgent);
+ /* SAMSUNG_CHROME : Samsung Internet fabrique une appli qu'Android 14+ bloque (« conçue pour une version plus ancienne d'Android ») : on passe par Chrome. */
+ const samsung=/SamsungBrowser/i.test(navigator.userAgent);
  const maj=()=>document.querySelectorAll("[data-inst]").forEach(b=>b.hidden=inst());
- addEventListener("beforeinstallprompt",e=>{e.preventDefault();evt=e;maj()});
+ addEventListener("beforeinstallprompt",e=>{e.preventDefault();if(!samsung)evt=e;maj()});
  addEventListener("appinstalled",()=>{evt=null;maj()});
  const etape=(txt,ic)=>`<li><span>${txt}</span>${ic||""}</li>`;
  async function installer(){
   if(evt){evt.prompt();try{await evt.userChoice}catch(e){}evt=null;maj();return}
   const P='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>',A='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>',M='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+  const chrome=`intent://${location.host}${location.pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent("https://play.google.com/store/apps/details?id=com.android.chrome")};end`;
+  if(samsung){const d=$("instaide");
+   d.innerHTML=`<div class="boite"><button class="x" onclick="$('instaide').close()" aria-label="Fermer">×</button><h3>Installer l'appli</h3><p class="sub">Sur les téléphones Samsung, Android bloque l'installation depuis <b>Samsung Internet</b>. Passe par <b>Chrome</b>, c'est rapide :</p><ol>${etape("Touche le bouton <b>« Ouvrir dans Chrome »</b> ci-dessous.")}${etape("Dans Chrome, touche <b>« 📲 Installer l'appli »</b>.")}${etape("Confirme avec <b>« Installer »</b>.")}</ol><div class="ok" style="gap:8px;flex-wrap:wrap"><a class="bt" href="${chrome}" style="display:inline-flex;align-items:center;text-decoration:none">Ouvrir dans Chrome</a><button class="bt2" onclick="$('instaide').close()">Plus tard</button></div></div>`;
+   d.onclick=ev=>{if(ev.target===d)d.close()};d.showModal();return}
   const etapes=ios?etape("Dans <b>Safari</b>, touche le bouton <b>Partager</b> (en bas de l'écran).",P)+etape("Fais défiler et choisis <b>« Sur l'écran d'accueil »</b>.",A)+etape("Touche <b>« Ajouter »</b> en haut à droite.")
    :android?etape("Ouvre le menu du navigateur (les <b>trois points</b>, en haut à droite).",M)+etape("Choisis <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.",A)+etape("Confirme avec <b>« Installer »</b>.")
    :etape("Dans la barre d'adresse de Chrome ou Edge, clique sur l'icône <b>Installer</b> (un écran avec une flèche).")+etape("Confirme avec <b>« Installer »</b>.");
